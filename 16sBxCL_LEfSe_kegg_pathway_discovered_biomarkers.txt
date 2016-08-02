@@ -1,0 +1,2 @@
+Two component system	4.158128505	Bx	2.788020547	0.042138554	Biopsy
+Pyruvate metabolism	4.026125693	FA	-2.002255784	0.049270702	LavageTranslation proteins	3.953201495	FA	-2.099683516	0.039964235	Lavage"Valine, leucine and isoleucine biosynthesis"	3.893085647	FA	-2.095716143	0.034003859	Lavage
