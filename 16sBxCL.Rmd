@@ -1,0 +1,1657 @@
+---
+title: Extending colonic mucosal microbiome analysis - Assessment of colonic lavage
+  as a proxy for endoscopic colonic biopsies
+output: html_document
+---
+
+# Euan Watt, MBChB, BSc(Hons); Matthew R Gemmell, BSc(Hons), MSc; Susan H Berry, BSc; Mark Glaire, MBChB, BSc(Hons); Freda Farquharson, BSc, MSc; Petra Louis, BSc; PhD; Graeme Murray, MBChB, PhD; Emad M El-Omar, MBChB, BSc(Hons), MD; Georgina Louise Hold, PhD
+
+This document contains all figure production carried out in R for the manuscript. 
+
+All data to reproduce analysis can be found here:
+https://github.com/m-gemmell/Watt_etal_16sBxCL
+
+
+## Figure 1: Species diversity comparison between colonic biopsy and lavage sample
+
+### Wilcox test to compare the Alpha diversity values of Biopsy and Lavagae samples
+```{r Alpha_diversity_wilcox_test}
+data <- read.csv("colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.groups.ave.txt", sep="\t", row.names = 1)
+Bx <- data[1:23,]
+FA <- data[24:46,]
+#Mannwhitney u test
+data$type<-c(rep("Bx",23), rep("FA",23))
+data$type <- as.factor(data$type)
+wilcox.test(sobs~type, data=data)
+wilcox.test(chao~type, data=data)
+wilcox.test(shannon~type, data=data)
+wilcox.test(invsimpson~type, data=data)
+wilcox.test(coverage~type, data=data)
+```
+
+### Box plots for alpha diversity value comparisons
+```{r alpha_diversity_boxplot}
+### Load packages or install if not present
+if (!require("RColorBrewer")) {
+  install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Files
+alpha_file="colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.groups.ave.txt"
+metadata_file="16sBxCL_Metadata.txt"
+#Read in files
+alpha_data <- read.csv(alpha_file,sep="\t", row.names = 1)
+metadata <- read.csv(metadata_file,sep="\t", row.names = 1)
+#Order alpha_data and metadata so they are the same order
+alpha_data <- alpha_data[order(row.names(alpha_data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match
+stopifnot(identical(row.names(alpha_data), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=alpha_data, y=metadata, by="row.names")
+#Fix row names after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#Remove unwanted columns
+plot_data_metadata <- plot_data_metadata[,c(-3,-4,-6,-7,-9,-10)]
+#Change name of alpha diversity values
+colnames(plot_data_metadata)[1:5] <- c("Observed OTUs", "Chao","Shannon-Weiner","Inverse Simpson", "Coverage")
+#Convert to long list format
+alpha_long <- gather(plot_data_metadata, Alpha_diversity_measure, value, 1:5)
+#Reorder measures
+alpha_long$Alpha_diversity_measure_f <- factor(alpha_long$Alpha_diversity_measure,levels=c("Observed OTUs", "Chao","Shannon-Weiner","Inverse Simpson", "Coverage"))
+#Set colours
+fa_b_colour <- brewer.pal(9, "Set1")
+#Box Plot for alpha diversity comparing lavage against biopsy
+g <- ggplot(alpha_long, aes(x=new.Sample.type, y=value, fill=new.Sample.type)) + geom_boxplot(outlier.colour = NA) + theme_set(theme_gray(base_size = 8)) +facet_wrap(~ Alpha_diversity_measure_f, nrow=1, scales="free") + geom_point(position = position_jitter(width = 0.2)) + scale_x_discrete(breaks=NULL, name="") + scale_fill_manual(values=c(fa_b_colour[2], fa_b_colour[1]), name="Sample type") + scale_y_continuous(name="") + theme(legend.position="bottom", legend.margin=unit(0,"cm"), plot.margin =unit(c(0,0,0,0),"mm"))
+ggsave("Fig1.pdf", g, units="mm", height=120, width=170, dpi=300)
+```
+```{r alpha_diversity_boxplot_figure, echo=FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {
+  install.packages("RColorBrewer")
+  library(RColorBrewer)
+}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Name of file
+alpha_file="colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.groups.ave.txt"
+metadata_file="16sBxCL_Metadata.txt"
+#Reads in data
+alpha_data <- read.csv(alpha_file,sep="\t", row.names = 1)
+metadata <- read.csv(metadata_file,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same then add them together
+alpha_data <- alpha_data[order(row.names(alpha_data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match
+identical(row.names(alpha_data), row.names(metadata))
+#Merge data frames
+plot_data_metadata <- merge(x=alpha_data, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#edit table to contain only data I am concerned with
+plot_data_metadata <- plot_data_metadata[,c(-3,-4,-6,-7,-9,-10)]
+#Change name of alpha diversity scores
+colnames(plot_data_metadata)[1:5] <- c("Observed OTUs", "Chao","Shannon-Weiner", "Inverse Simpson", "Coverage")
+#Convert to long
+alpha_long <- gather(plot_data_metadata, Alpha_diversity_measure, value, 1:5)
+#Reorder measures
+alpha_long$Alpha_diversity_measure_f <- factor(alpha_long$Alpha_diversity_measure,
+                     levels=c("Observed OTUs", "Chao","Shannon-Weiner", 
+                              "Inverse Simpson", "Coverage"))
+#p values for alpha diveristies
+pvalues <- data.frame(Alpha_diversity_measure_f = c("sobs",	"chao",	"shannon",	"invsimpson",	"coverage"),pvalue = c("4.213e-06",	"6.593e-10",	"0.7441",	"0.8278",	"2.223e-10"))
+#Set colours
+fa_b_colour <- brewer.pal(9, "Set1")
+#Box Plot for aspirate against biopsy
+g <- ggplot(alpha_long, aes(x=new.Sample.type, y=value, fill=new.Sample.type)) + geom_boxplot(outlier.colour = NA) + theme_set(theme_gray(base_size = 8)) + facet_wrap(~ Alpha_diversity_measure_f, nrow=1, scales="free") + geom_point(position = position_jitter(width = 0.2)) + scale_x_discrete(breaks=NULL, name="") + scale_fill_manual(values=c(fa_b_colour[2], fa_b_colour[1]), name="Sample type") + scale_y_continuous(name="") + theme(legend.position="bottom", legend.margin=unit(0,"cm"), plot.margin =unit(c(0,0,0,0),"mm"))
+g
+```
+
+## Figure 2: Relative abundance at phylum level for colonic biopsy and lavage samples. 
+
+```{r Phyla_relabund_barchart}
+### Load packages or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Read in files
+data <- read.csv("16sBxCL_phylum_phylotype_summary.txt", sep = "\t", row.names = 1)
+metadata <- read.csv("16sBxCL_Metadata.txt", sep = "\t", row.names = 1)
+#Order data and metadata so they are the same order
+data <- data[order(row.names(data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata), row.names(data)))
+#Merge data
+plot_data_metadata <- merge(x=data, y=metadata, by="row.names")
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#Change BD1.5 to BD1-5
+colnames(plot_data_metadata)[14] <- "Candidate_division_BD1-5"
+#Change Deinococcus.Thermus to Deinococcus Thermus
+colnames(plot_data_metadata)[20] <- "Deinococcus Thermus"
+#Change data to long list format
+plot_data_metadata_long <- gather(plot_data_metadata, Phylum, relabund, Firmicutes:Chloroflexi)
+#Colours for phyla
+colset <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1"))
+#Change Participant numbers into strings
+plot_data_metadata_long$Individual <- as.character(plot_data_metadata_long$Individual)
+#Change order of phylum factor and individual factor
+plot_data_metadata_long$Phylum <- factor(plot_data_metadata_long$Phylum,levels = unique(plot_data_metadata_long$Phylum))
+plot_data_metadata_long$Individual <- factor(plot_data_metadata_long$Individual,levels = c(2,3,4,9:13,15:22,24:29,32,33))
+#Bar chart
+g_bar <- ggplot(plot_data_metadata_long, aes(x = Individual, y=relabund, fill=Phylum)) +geom_bar(stat = 'identity', position = 'stack', width=0.9) + facet_wrap( ~ new.Sample.type, nrow=1) + scale_fill_manual(values = colset) + theme_set(theme_gray(base_size = 8)) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("Subject code") + ylab("Relative abundance") + scale_y_continuous(expand = c(0,0)) + geom_text(aes(x=1, y=1.00, label="Stretch it"), vjust=-1) + theme(legend.position="bottom", legend.key.size = unit(4, "mm"), legend.margin=unit(0,"cm"),plot.margin =unit(c(0,0,0,0),"mm")) + labs(fill='')
+ggsave("Fig2.pdf", g_bar, units="cm", height=14, width=17, dpi=300)
+```
+```{r Phyla_relabund_barchart_fig, echo = FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#for gather command (wide to long)
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Read in files
+data <- read.csv("16sBxCL_phylum_phylotype_summary.txt", sep = "\t", row.names = 1)
+metadata <- read.csv("16sBxCL_Metadata.txt", sep = "\t", row.names = 1)
+#
+#Check if heatmap_info and metadata_info are in the same order
+data <- data[order(row.names(data)),]
+metadata <- metadata[order(row.names(metadata)),]
+identical(row.names(metadata), row.names(data))
+#Merge data
+plot_data_metadata <- merge(x=data, y=metadata, by="row.names")
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#ChangeBD1.5 to BD1-5
+colnames(plot_data_metadata)[14] <- "Candidate_division_BD1-5"
+#Chanigng name of Deinococcus.Thermus to Deinococcus Thermus
+colnames(plot_data_metadata)[20] <- "Deinococcus Thermus"
+#Change data to long format
+plot_data_metadata_long <- gather(plot_data_metadata, Phylum, relabund, Firmicutes:Chloroflexi)
+#Colours for phyla
+colset <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1"))
+#Change individual numbers into strings
+plot_data_metadata_long$Individual <- as.character(plot_data_metadata_long$Individual)
+#Change order of phylum factor and individual factor
+plot_data_metadata_long$Phylum <- factor(plot_data_metadata_long$Phylum,
+                                levels = unique(plot_data_metadata_long$Phylum))
+plot_data_metadata_long$Individual <- factor(plot_data_metadata_long$Individual,levels = c(2,3,4,9:13,15:22,24:29,32,33))
+g_bar <- ggplot(plot_data_metadata_long, aes(x = Individual, y=relabund, fill=Phylum)) + geom_bar(stat = 'identity', position = 'stack', width=0.9) + facet_wrap( ~ new.Sample.type, nrow=1) + scale_fill_manual(values = colset) + theme_set(theme_gray(base_size = 8)) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("Subject code") + ylab("Relative abundance") + scale_y_continuous(expand = c(0,0)) + geom_text(aes(x=1, y=1.00, label="Stretch it"), vjust=-1) + theme(legend.position="bottom", legend.key.size = unit(4, "mm"),legend.margin=unit(0,"cm"),plot.margin =unit(c(0,0,0,0),"mm")) + labs(fill='')
+g_bar
+```
+
+## Figure 3: The distribution of bacteria in colonic biopsy and lavage samples at Family Level
+2 heatmaps produced to give the colours for sample type and particpant for each column
+The two heatmaps were combined using powerpoint
+```{r family_heatmap}
+### Load packages or install if not present
+if (!require("arules")) {install.packages("arules")
+  library(arules)}
+if (!require("ade4")) {install.packages("ade4")
+  library(ade4)}
+if (!require("vegan")) {install.packages("vegan")
+  library(vegan)}
+if (!require("gdata")) {install.packages("gdata")
+  library(gdata)}
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+#Load in data
+data <- read.csv("16sBxCL_family_phylotype_log2counts_summary.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+#Remove unwanted column
+heatmap_info <- data[,-1]
+sample_info <- metadata_info$Sample.type
+#Selecting a colour palette to be used in figure
+brewer_colours <- brewer.pal(9, "Set1")
+#Order heatmap_info and metadata so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Setting colours to sample_types
+sample_type_colours <- gsub("aspirate",brewer_colours[1], sample_info)
+sample_type_colours <- gsub("biopsy", brewer_colours[2], sample_type_colours)
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#producing heatmaps
+pdf("Fig3A.pdf", 170/25.4,height=182.4/25.4)
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=sample_type_colours,margins = c(2,8),key.xlab="Log2count", key.title=NA,trace="none", col=function(x)rev(heat.colors(x)), labRow = row.names(heatmap.info.t), cexRow = 0.55, cexCol = 0.55, offsetRow=0.0000001, offsetCol = 0.0000001, labCol = metadata_info$new.Sample.ID, key.par=list(mar=c(1,3,1,1), cex=0.3), lwid=c(1,4), lhei=c(1,9))
+dev.off()
+pdf("Fig3B.pdf",170/25.4, height=182.4/25.4)
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=as.character(metadata_info$Colour), margins = c(2,8), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), labRow = row.names(heatmap.info.t), cexRow = 0.55, cexCol = 0.55, offsetRow=0.0000001, offsetCol = 0.0000001, labCol = metadata_info$new.Sample.ID, key.par=list(mar=c(1,3,1,1), cex=0.3), lwid=c(1,4), lhei=c(1,9))
+dev.off()
+```
+```{r family_heatmap_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("arules")) {install.packages("arules")
+  library(arules)}
+if (!require("ade4")) {install.packages("ade4")
+  library(ade4)}
+if (!require("vegan")) {install.packages("vegan")
+  library(vegan)}
+if (!require("gdata")) {install.packages("gdata")
+  library(gdata)}
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+data <- read.csv("16sBxCL_family_phylotype_log2counts_summary.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- metadata_info$Sample.type
+#Getting colours from colour brewer
+brewer_colours <- brewer.pal(9, "Set1")
+#Check if heatmap_info and metadata_info are in the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+identical(row.names(metadata_info), row.names(heatmap_info))
+##Setting colours to sample_types
+sample_type_colours <- gsub("aspirate",brewer_colours[1], sample_info)
+sample_type_colours <- gsub("biopsy", brewer_colours[2], sample_type_colours)
+#Transpoing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#producing heatmap
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=sample_type_colours, margins = c(2,8), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), labRow = row.names(heatmap.info.t), cexRow = 0.55, cexCol = 0.55, offsetRow=0.0000001, offsetCol = 0.0000001, labCol = metadata_info$new.Sample.ID, key.par=list(mar=c(1,3,1,1), cex=0.3), lwid=c(1,4), lhei=c(1,9))
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=as.character(metadata_info$Colour), margins = c(2,8), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), labRow = row.names(heatmap.info.t), cexRow = 0.55, cexCol = 0.55, offsetRow=0.0000001, offsetCol = 0.0000001, labCol = metadata_info$new.Sample.ID, key.par=list(mar=c(1,3,1,1), cex=0.3), lwid=c(1,4), lhei=c(1,9))
+```
+
+## Figure 4: Beta diveristy measures
+
+## A & B) Clustering of samples according to sample type (colonic biopsy and lavage) by PCoA based on (A) Jaccard and (B) Yue & Clayton similarity distance
+```{r PCoA_plots}
+#Function to produce plot and PDF of plot
+produce_plot <- function(axes_file, metadata_file, loadings_file, PDF_file, SAMPLE, PAIRED){
+  ### Load package or install if not present
+  if (!require("RColorBrewer")) {
+    install.packages("RColorBrewer")
+    library(RColorBrewer)
+  }
+#Reads in data
+plot_data <- read.csv(axes_file,sep="\t", row.names = 1)
+metadata <- read.csv(metadata_file,sep="\t", row.names = 1)
+loadings_info <- read.csv(loadings_file,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same order
+plot_data <- plot_data[order(row.names(plot_data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match and stop if not
+stopifnot(identical(row.names(plot_data), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=plot_data, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#Sets columns to variables
+axis1 <- plot_data_metadata[,1]
+axis2 <- plot_data_metadata[,2]
+axis3 <- plot_data_metadata[,3]
+#Set the minimum and maximum x so each plot is the same size as each other for comparison 
+maxx <- max(c(max(axis1),max(axis2),max(axis3)))
+minx <- min(c(min(axis1),min(axis2),min(axis3)))
+#Grouping to colour by
+group_samples <- as.factor(plot_data_metadata[,SAMPLE])
+#Creates plot points for first and second samples
+#This data will be used to connect the points together
+first_level <- levels(plot_data_metadata[,PAIRED])[1]
+second_level <- levels(plot_data_metadata[,PAIRED])[2]
+first_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==first_level,]
+second_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==second_level,]
+#Order data to get colouring correct
+first_rows <- first_rows[order(first_rows[,SAMPLE]),]
+second_rows <- second_rows[order(second_rows[,SAMPLE]),]
+first_group_samples <- as.factor(first_rows[,SAMPLE])
+second_group_samples <- as.factor(second_rows[,SAMPLE])
+#Select colour palette for plot
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+palette(col.brew)
+#Assignment of loading values
+axis_1_lab <- paste("axis1, ", round(loadings_info[1,1], digits=2), "%")
+axis_2_lab <- paste("axis2, ", round(loadings_info[2,1], digits=2), "%")
+axis_3_lab <- paste("axis3, ", round(loadings_info[3,1], digits=2), "%")
+#Function to produce single 2d plot
+plot_production <- function(nx, ny, xlabel, ylabel){
+ps <- 1 
+  #Make an empty plotting area with axis labels
+  plot(0,0, xlab = xlabel, ylab = ylabel, xlim=c(minx-0.05, maxx+0.05), ylim=c(minx-0.05, maxx+0.05), pch=19,col=NA, type='b')
+  #Sets colour of background of plot
+  rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#f6f6f6")
+  #Sets gridlines that match the ticks of the axes
+  grid (NULL,NULL, lty = 6, col = "black", lwd=0.3)
+  #Add black borders to points
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=ps+0.1)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=ps+0.1)
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=ps-0.1)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=ps-0.1)
+  #This part will plot pair by pair
+  #This is so pairs only connect to each other by the dashed lines
+  for (i in 1:num_samples){
+    n <- i
+    points(c(first_rows[n,nx],second_rows[n,nx]), c(first_rows[n,ny],second_rows[n,ny]), type='b', pch=c(2,1), lwd=ps, col=i, cex=ps, lty=2)
+  }
+}
+#Save plot to pdf file
+pdf(PDF_file, width = 170/25.4, height = 50/25.4)
+#Creates diagram to put PCoA plots into
+par(mfrow=c(1,3), oma = c(0.8,0.8,0,0),
+    mgp= c(2,1,0), mar=c(3,3,0.5,0.5), cex=0.7)
+num_samples <- nrow(first_rows)
+# creating the 3 2d plots
+plot_production(1,2,axis_1_lab,axis_2_lab)
+plot_production(1,3,axis_1_lab,axis_3_lab)
+plot_production(3,2,axis_3_lab,axis_2_lab)
+dev.off()
+}
+#Jaccard PCoA plots
+#File names of input data
+axes_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.jclass.0.03.lt.ave.pcoa.axes"
+metadata_file_name <- "16sBxCL_Metadata.txt"
+loadings_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.jclass.0.03.lt.ave.pcoa.loadings"
+#Name of PDF output file
+pdf_file_name <- "Fig4A.pdf"
+#Relevant metadata info
+paired <- "Sample.type"
+sample <- "Individual"
+#Produce plot 
+produce_plot(axes_file_name, metadata_file_name, loadings_file_name, pdf_file_name, sample, paired)
+#yue & Clayton PCoA plots
+#File names of input data
+axes_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.thetayc.0.03.lt.ave.pcoa.axes"
+metadata_file_name <- "16sBxCL_Metadata.txt"
+loadings_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.thetayc.0.03.lt.ave.pcoa.loadings"
+#Name of PDF output file
+pdf_file_name <- "Fig4B.pdf"
+#Relevant metadata info
+paired <- "Sample.type"
+sample <- "Individual"
+#Produce plot 
+produce_plot(axes_file_name, metadata_file_name, loadings_file_name, pdf_file_name, sample, paired)
+```
+```{r PCoA_plots_fig, echo=FALSE}
+#Function to produce plot and PDF of plot
+produce_plot <- function(axes_file, metadata_file, loadings_file, PDF_file, SAMPLE, PAIRED){
+  ### Load the package or install if not present
+  if (!require("RColorBrewer")) {
+    install.packages("RColorBrewer")
+    library(RColorBrewer)
+  }
+#Reads in data
+plot_data <- read.csv(axes_file,sep="\t", row.names = 1)
+metadata <- read.csv(metadata_file,sep="\t", row.names = 1)
+loadings_info <- read.csv(loadings_file,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same then add them together
+plot_data <- plot_data[order(row.names(plot_data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match and stop if not
+stopifnot(identical(row.names(plot_data), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=plot_data, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#Sets columns to variables
+axis1 <- plot_data_metadata[,1]
+axis2 <- plot_data_metadata[,2]
+axis3 <- plot_data_metadata[,3]
+#Used to set the minimum and maximum x so each
+#plot is the same size as each other for better comparison 
+maxx <- max(c(max(axis1),max(axis2),max(axis3)))
+minx <- min(c(min(axis1),min(axis2),min(axis3)))
+#Grouping to colour by
+group_samples <- as.factor(plot_data_metadata[,SAMPLE])
+#Creates plot points for first and second samples
+#This data will be used to connect the points together
+first_level <- levels(plot_data_metadata[,PAIRED])[1]
+second_level <- levels(plot_data_metadata[,PAIRED])[2]
+first_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==first_level,]
+second_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==second_level,]
+#Order data to get colouring correct
+first_rows <- first_rows[order(first_rows[,SAMPLE]),]
+second_rows <- second_rows[order(second_rows[,SAMPLE]),]
+first_group_samples <- as.factor(first_rows[,SAMPLE])
+second_group_samples <- as.factor(second_rows[,SAMPLE])
+#If you would like to reorder the levels of your groups
+#group_samples <- factor(group_samples,levels(group_samples)[c(NUMBERS)])
+#Creates colour palette to be used for colouring points
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+palette(col.brew)
+#Assignment of loading values
+axis_1_lab <- paste("axis1, ", round(loadings_info[1,1], digits=2), "%")
+axis_2_lab <- paste("axis2, ", round(loadings_info[2,1], digits=2), "%")
+axis_3_lab <- paste("axis3, ", round(loadings_info[3,1], digits=2), "%")
+#Function to produce single 2d plot
+plot_production <- function(nx, ny, xlabel, ylabel){
+ps <- 1 
+  #Make an empty plotting area with axis labels
+  plot(0,0, xlab = xlabel, ylab = ylabel, xlim=c(minx-0.05, maxx+0.05), ylim=c(minx-0.05, maxx+0.05), pch=19,col=NA, type='b')
+  #Sets colour of background of plot
+  rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#f6f6f6")
+  #Sets gridlines that match the ticks of the axes
+  grid (NULL,NULL, lty = 6, col = "black", lwd=0.3)
+  #Add black borders to points
+  #These are put behind the points
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=ps+0.1)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=ps+0.1)
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=ps-0.1)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=ps-0.1)
+  #This part will plot pair by pair
+  #This is so pairs only connect to each other by the dashed lines
+  for (i in 1:num_samples){
+    n <- i
+    points(c(first_rows[n,nx],second_rows[n,nx]), c(first_rows[n,ny],second_rows[n,ny]),  type='b', pch=c(2,1), lwd=ps, col=i, cex=ps, lty=2)
+  }
+}
+#Creates diagram to put diagrams into
+par(mfrow=c(1,3), oma = c(0.8,0.8,0,0),
+    mgp= c(2,1,0), mar=c(3,3,0.5,0.5), cex=0.7)
+num_samples <- nrow(first_rows)
+# creating the 3 2d plots
+plot_production(1,2,axis_1_lab,axis_2_lab)
+plot_production(1,3,axis_1_lab,axis_3_lab)
+plot_production(3,2,axis_3_lab,axis_2_lab)
+}
+#File names to input
+#PCoA axes file from mothur
+axes_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.jclass.0.03.lt.ave.pcoa.axes"
+#Metadata file with row names same as PCoA axes row names
+metadata_file_name <- "16sBxCL_Metadata.txt"
+#Loadings file for axes
+loadings_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.jclass.0.03.lt.ave.pcoa.loadings"
+#Name of PDF to be output
+#Make sure it ends with .pdf
+pdf_file_name <- "CGEBMP83_new_3by2d_pcoa_jclass_connected_points.pdf"
+##Name of column to seperate paired samples
+paired <- "Sample.type"
+#Name of column to seperate samples
+sample <- "Individual"
+#Produce plot 
+produce_plot(axes_file_name, metadata_file_name, loadings_file_name, pdf_file_name, sample, paired)
+#File names to input
+#PCoA axes file from mothur
+axes_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.thetayc.0.03.lt.ave.pcoa.axes"
+#Metadata file with row names same as PCoA axes row names
+metadata_file_name <- "16sBxCL_Metadata.txt"
+#Loadings file for axes
+loadings_file_name <- "colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.thetayc.0.03.lt.ave.pcoa.loadings"
+#Name of PDF to be output
+#Make sure it ends with .pdf
+pdf_file_name <- "CGEBMP83_new_3by2d_pcoa_thetayc_connected_points.pdf"
+##Name of column to seperate paired samples
+paired <- "Sample.type"
+#Name of column to seperate samples
+sample <- "Individual"
+#Produce plot 
+produce_plot(axes_file_name, metadata_file_name, loadings_file_name, pdf_file_name, sample, paired)
+```
+
+## C & D) Intra and inter-subject beta diversity related distance measures.
+```{r boxplot_intra_inter_dists}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Read in Jaccard  & thetayc info
+tri_jaccard <- read.csv("16sBxCL_avg_jaccard.dist", sep = "\t")
+tri_thetayc <- read.csv("16sBxCL_avg_yue_clayton.dist", sep = "\t")
+#Convert to long
+tri_jaccard_long <- gather(tri_jaccard, SAMPLE_2, paired_dist, 2:(ncol(tri_jaccard)))
+tri_thetayc_long <- gather(tri_thetayc, SAMPLE_2, paired_dist, 2:(ncol(tri_thetayc)))
+#Change name of column 1
+colnames(tri_jaccard_long)[1] <- "SAMPLE_1"
+colnames(tri_thetayc_long)[1] <- "SAMPLE_1"
+#Remove rows with NA
+tri_jaccard_long <- tri_jaccard_long[complete.cases(tri_jaccard_long),]
+tri_thetayc_long <- tri_thetayc_long[complete.cases(tri_thetayc_long),]
+#Add a column to indicate distance type
+tri_jaccard_long$calc <- "Jaccard"
+tri_thetayc_long$calc <- "Yue & Clayton"
+#Row bind the dataframes to make one with all the info
+long_data <- rbind(tri_jaccard_long, tri_thetayc_long)
+#Change FA to CL
+long_data$SAMPLE_1 <- gsub("FA", "CL", long_data$SAMPLE_1)
+long_data$SAMPLE_2 <- gsub("FA", "CL", long_data$SAMPLE_2)
+#Make columns with only Participant info
+long_data$SAMPLE_1_PARTICIPANT <- gsub("_S.*", "", long_data$SAMPLE_1)
+long_data$SAMPLE_1_PARTICIPANT <- gsub("Test[A-z]{2}", "", long_data$SAMPLE_1_PARTICIPANT)
+long_data$SAMPLE_2_PARTICIPANT <- gsub("_S.*", "", long_data$SAMPLE_2)
+long_data$SAMPLE_2_PARTICIPANT <- gsub("Test[A-z]{2}", "", long_data$SAMPLE_2_PARTICIPANT)
+#Make columns with only sample type info
+long_data$SAMPLE_1_TYPE <- gsub("Test","",long_data$SAMPLE_1)
+long_data$SAMPLE_1_TYPE <- gsub("[0-9].*","",long_data$SAMPLE_1_TYPE)
+long_data$SAMPLE_2_TYPE <- gsub("Test","",long_data$SAMPLE_2)
+long_data$SAMPLE_2_TYPE <- gsub("[0-9].*","",long_data$SAMPLE_2_TYPE)
+#Now a column to determine if the paired dist is intra or inter participant
+long_data$intra_participant <- long_data$SAMPLE_1_PARTICIPANT == long_data$SAMPLE_2_PARTICIPANT
+#Give an informative name
+long_data$intra_participant <- gsub("TRUE", "Intra Participant", long_data$intra_participant)
+long_data$intra_participant <- gsub("FALSE", "Inter Participant", long_data$intra_participant)
+#Column to indicate if it is Bx-Bx, CL-CL or Bx-CL
+long_data$SAMPLE_TYPES <- paste0(long_data$SAMPLE_1_TYPE, "-", long_data$SAMPLE_2_TYPE)
+long_data$SAMPLE_TYPES <- gsub("CL-Bx", "Bx-CL", long_data$SAMPLE_TYPES)
+#create a long list format with
+#Column for paired dist
+#Calc
+#Descriptiotn including Inter, Intra, BX-BX BX-CL and CL-CL
+#First creat a long list for Inter & intra info and rename intra column
+Inter_Intra_long <- long_data[,c("paired_dist", "calc", "intra_participant")]
+colnames(Inter_Intra_long)[3] <- "description"
+#Next the same for the Sample types info
+Sample_types_long <- long_data[,c("paired_dist", "calc", "SAMPLE_TYPES")]
+colnames(Sample_types_long)[3] <- "description"
+#now row bind the two long lists
+description_long <- rbind(Inter_Intra_long, Sample_types_long)
+#Set colours
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+#now produce the box plots facetted by calc
+g_box <- ggplot(description_long, aes(x=description, y=paired_dist, fill=description)) + 
+  #boxplot
+  geom_boxplot(outlier.colour = "NA", weight=0.1, size = 0.2) +
+  #facte by calc
+  facet_wrap(~calc, nrow = 2) +
+  labs(x = "", y = "") +
+  scale_fill_manual(values=col.brew) +
+  #Changes size of text to equivalent of word point size
+  theme_grey(base_size = 8) +
+  #remove legend
+  theme(legend.position="none") +
+  #Set so y scale goes from 0 to 1
+  scale_y_continuous(limits = c(0, 1))
+#This command will save the above g_bar object as a pdf
+#Can change the size of the PDF
+ggsave("Fig4CD.pdf", g_box, units="mm", height=100, width=170, dpi=300)
+```
+```{r boxplot_intra_inter_dists_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Read in Jaccard  & thetayc info
+tri_jaccard <- read.csv("16sBxCL_avg_jaccard.dist", sep = "\t")
+tri_thetayc <- read.csv("16sBxCL_avg_yue_clayton.dist", sep = "\t")
+#Convert to long
+tri_jaccard_long <- gather(tri_jaccard, SAMPLE_2, paired_dist, 2:(ncol(tri_jaccard)))
+tri_thetayc_long <- gather(tri_thetayc, SAMPLE_2, paired_dist, 2:(ncol(tri_thetayc)))
+#Change name of column 1
+colnames(tri_jaccard_long)[1] <- "SAMPLE_1"
+colnames(tri_thetayc_long)[1] <- "SAMPLE_1"
+#Remove rows with NA
+tri_jaccard_long <- tri_jaccard_long[complete.cases(tri_jaccard_long),]
+tri_thetayc_long <- tri_thetayc_long[complete.cases(tri_thetayc_long),]
+#Add a column to indicate distance type
+tri_jaccard_long$calc <- "Jaccard"
+tri_thetayc_long$calc <- "Yue & Clayton"
+#Row bind the dataframes to make one with all the info
+long_data <- rbind(tri_jaccard_long, tri_thetayc_long)
+#Change FA to CL
+long_data$SAMPLE_1 <- gsub("FA", "CL", long_data$SAMPLE_1)
+long_data$SAMPLE_2 <- gsub("FA", "CL", long_data$SAMPLE_2)
+#Make columns with only Participant info
+long_data$SAMPLE_1_PARTICIPANT <- gsub("_S.*", "", long_data$SAMPLE_1)
+long_data$SAMPLE_1_PARTICIPANT <- gsub("Test[A-z]{2}", "", long_data$SAMPLE_1_PARTICIPANT)
+long_data$SAMPLE_2_PARTICIPANT <- gsub("_S.*", "", long_data$SAMPLE_2)
+long_data$SAMPLE_2_PARTICIPANT <- gsub("Test[A-z]{2}", "", long_data$SAMPLE_2_PARTICIPANT)
+#Make columns with only sample type info
+long_data$SAMPLE_1_TYPE <- gsub("Test","",long_data$SAMPLE_1)
+long_data$SAMPLE_1_TYPE <- gsub("[0-9].*","",long_data$SAMPLE_1_TYPE)
+long_data$SAMPLE_2_TYPE <- gsub("Test","",long_data$SAMPLE_2)
+long_data$SAMPLE_2_TYPE <- gsub("[0-9].*","",long_data$SAMPLE_2_TYPE)
+#Now a column to determine if the paired dist is intra or inter participant
+long_data$intra_participant <- long_data$SAMPLE_1_PARTICIPANT == long_data$SAMPLE_2_PARTICIPANT
+#Give an informative name
+long_data$intra_participant <- gsub("TRUE", "Intra Participant", long_data$intra_participant)
+long_data$intra_participant <- gsub("FALSE", "Inter Participant", long_data$intra_participant)
+#Column to indicate if it is Bx-Bx, CL-CL or Bx-CL
+long_data$SAMPLE_TYPES <- paste0(long_data$SAMPLE_1_TYPE, "-", long_data$SAMPLE_2_TYPE)
+long_data$SAMPLE_TYPES <- gsub("CL-Bx", "Bx-CL", long_data$SAMPLE_TYPES)
+#create a long list format with
+#Column for paired dist
+#Calc
+#Descriptiotn including Inter, Intra, BX-BX BX-CL and CL-CL
+#First creat a long list for Inter & intra info and rename intra column
+Inter_Intra_long <- long_data[,c("paired_dist", "calc", "intra_participant")]
+colnames(Inter_Intra_long)[3] <- "description"
+#Next the same for the Sample types info
+Sample_types_long <- long_data[,c("paired_dist", "calc", "SAMPLE_TYPES")]
+colnames(Sample_types_long)[3] <- "description"
+#now row bind the two long lists
+description_long <- rbind(Inter_Intra_long, Sample_types_long)
+#Set colours
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+#now produce the box plots facetted by calc
+g_box <- ggplot(description_long, aes(x=description, y=paired_dist, fill=description)) + 
+  #boxplot
+  geom_boxplot(outlier.colour = "NA", weight=0.1, size = 0.2) +
+  #facte by calc
+  facet_wrap(~calc, nrow = 2) +
+  labs(x = "", y = "") +
+  scale_fill_manual(values=col.brew) +
+  #Changes size of text to equivalent of word point size
+  theme_grey(base_size = 8) +
+  #remove legend
+  theme(legend.position="none") +
+  #Set so y scale goes from 0 to 1
+  scale_y_continuous(limits = c(0, 1))
+#Output figure
+g_box
+```
+
+## Figure 5: Spearman correlation plot of biopsy against lavage samples using OTU counts
+```{r pearson_corr}
+### Load packages or install if not present
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("Hmisc")) {install.packages("Hmisc")
+  library(Hmisc)}
+if (!require("corrplot")) {install.packages("corrplot")
+  library(corrplot)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#Load in data
+otu_info <- read.csv("colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.shared", sep="\t", row.names = 2, header=TRUE)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+#remove unwanted columns
+otu_info <- otu_info[,c(-1,-2)]
+otu_info <- otu_info[,-17525]
+#Order otu_info and metadata_info so they are the same order
+otu_info <- otu_info[order(row.names(otu_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(otu_info)))
+#Change row names
+row.names(otu_info) <- metadata_info$new.Sample.ID
+#Order by new row names
+otu_info <- otu_info[order(row.names(otu_info)),]
+#Transpose otu_info
+trans_otu_info <- t(otu_info)
+#Change Total OTU amounts into relative abundance
+relabund_otu_info <- prop.table(trans_otu_info, margin=2)
+#Calculate Spearman values
+data_rcorr <- rcorr(as.matrix(trans_otu_info), type = "spearman")
+spearman_cor <- data_rcorr$r
+spearman_p <- data_rcorr$P
+#Keep info interested in
+subset_spearman_cor <- spearman_cor[1:23,24:46]
+subset_spearman_p <- spearman_p[1:23,24:46]
+#Correlation plot of FL samples against Bx samples
+pdf("Fig5.pdf",height = 87/25.4, width=87/25.4)
+par(mfrow=c(1,1), mar=c(0,0,0,0), cex=0.6)
+corrplot((subset_spearman_cor),type="full", mar=c(0,0,0,0), cl.pos="b",
+         p.mat=subset_spearman_p, sig.level = 0.05, insig="blank")
+dev.off()
+```
+```{r pearson_corr_fig, echo=FALSE}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("Hmisc")) {install.packages("Hmisc")
+  library(Hmisc)}
+if (!require("corrplot")) {install.packages("corrplot")
+  library(corrplot)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#Load in data
+otu_info <- read.csv("colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.shared", sep="\t", row.names = 2, header=TRUE)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+#remove unwanted columns
+otu_info <- otu_info[,c(-1,-2)]
+otu_info <- otu_info[,-17525]
+#Order otu_info and metadata_info so they are the same order
+otu_info <- otu_info[order(row.names(otu_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(otu_info)))
+#Change row names
+row.names(otu_info) <- metadata_info$new.Sample.ID
+#Order by new row names
+otu_info <- otu_info[order(row.names(otu_info)),]
+#Transpose otu_info
+trans_otu_info <- t(otu_info)
+#Change Total OTU amounts into relative abundance
+relabund_otu_info <- prop.table(trans_otu_info, margin=2)
+#Calculate Spearman values
+data_rcorr <- rcorr(as.matrix(trans_otu_info), type = "spearman")
+spearman_cor <- data_rcorr$r
+spearman_p <- data_rcorr$P
+#Keep info interested in
+subset_spearman_cor <- spearman_cor[1:23,24:46]
+subset_spearman_p <- spearman_p[1:23,24:46]
+#Correlation plot of FL samples against Bx samples
+par(mfrow=c(1,1), mar=c(0,0,0,0), cex=0.6)
+corrplot((subset_spearman_cor),type="full", mar=c(0,0,0,0), cl.pos="b",
+         p.mat=subset_spearman_p, sig.level = 0.05, insig="blank")
+```
+
+## Figure 6: Differentially abundant genera between biopsy and lavage samples by LefSe
+
+### A) LEfSe LDA scores
+```{r lefse_plot}
+### Load packages or install if not present
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+#read in data
+plot_data <- read.csv("16sBxCL_LEfSe_summary_subsample.txt", sep="\t")
+plot_data$Species <- factor(plot_data$Species, levels=plot_data$Species[order(plot_data$LDA)])
+#Produce Plot
+g <- ggplot(plot_data, aes(x=Species, y=LDA, fill=new.Class)) + geom_bar(stat="identity", position="identity") + coord_flip() + ylab("LDA SCORE (log 10)") + xlab("") + theme_set(theme_gray(base_size = 8)) + scale_fill_manual(name="Class", values = c("#377EB8","#E41A1C"), breaks=c("Biopsy", "Lavage"), labels=c("Biopsy", "Lavage")) + theme(text= element_text(size=8), axis.text.y  = element_text(size=8), axis.text.x  = element_text(size=8), legend.text= element_text(size = 8), legend.key.size = unit(4, "mm"), plot.margin=unit(c(1,1,1,1),"mm"))
+ggsave("Fig6A.pdf", g, units="mm", height=70, width=170, dpi=300)
+```
+```{r lefse_plot_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+#read in data
+plot_data <- read.csv("16sBxCL_LEfSe_summary_subsample.txt", sep="\t")
+plot_data$Species <- factor(plot_data$Species, levels=plot_data$Species[order(plot_data$LDA)])
+#
+g <- ggplot(plot_data, aes(x=Species, y=LDA, fill=new.Class)) + geom_bar(stat="identity", position="identity") + coord_flip() + ylab("LDA SCORE (log 10)") + xlab("") + theme_set(theme_gray(base_size = 8)) + scale_fill_manual(name="Class", values = c("#377EB8","#E41A1C"), breaks=c("Biopsy", "Lavage"), labels=c("Biopsy", "Lavage")) + theme(text= element_text(size=8), axis.text.y  = element_text(size=8), axis.text.x  = element_text(size=8), legend.text= element_text(size = 8), legend.key.size = unit(4, "mm"), plot.margin=unit(c(1,1,1,1),"mm"))
+g
+```
+
+### B) Heat map of Log2count of OTUs
+```{r lefse_genera_heatmap}
+### Load packages or install if not present
+if (!require("arules")) {install.packages("arules")
+  library(arules)}
+if (!require("ade4")) {install.packages("ade4")
+  library(ade4)}
+if (!require("vegan")) {install.packages("vegan")
+  library(vegan)}
+if (!require("gdata")) {install.packages("gdata")
+  library(gdata)}
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+#Load in data and edit
+data <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", header=FALSE, sep="\t", row.names=1)
+taxa_info <- taxa_info[1,-1]
+#Selecting a colour palette to be used in plot
+brewer_colours <- brewer.pal(9, "Set1")
+#Order heatmap_info and metadata_info so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+##Setting colours to sample_types
+sample_type_colours <- gsub("FA",brewer_colours[1], sample_info)
+sample_type_colours <- gsub("Bx", brewer_colours[2], sample_type_colours)
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#produce heatmap
+pdf("Fig6B.pdf",
+    170/25.4, height=110/25.4)
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=sample_type_colours, margins = c(2.7,8.5), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), labRow = row.names(heatmap.info.t), cexRow = 0.7, cexCol = 0.7, offsetRow=0.0000001, offsetCol = 0.0000001, labCol = metadata_info$new.Sample.ID, key.par=list(mar=c(2,4,1,1), cex=0.4), lwid=c(1,5), lhei=c(1,5))
+dev.off()
+```
+```{r lefse_genera_heatmap_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("arules")) {install.packages("arules")
+  library(arules)}
+if (!require("ade4")) {install.packages("ade4")
+  library(ade4)}
+if (!require("vegan")) {install.packages("vegan")
+  library(vegan)}
+if (!require("gdata")) {install.packages("gdata")
+  library(gdata)}
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+data <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", header=FALSE, sep="\t", row.names=1)
+taxa_info <- taxa_info[1,-1]
+#Getting colours from colour brewer
+brewer_colours <- brewer.pal(9, "Set1")
+#Check if heatmap_info and metadata_info are in the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+identical(row.names(metadata_info), row.names(heatmap_info))
+##Setting colours to sample_types
+sample_type_colours <- gsub("FA",brewer_colours[1], sample_info)
+sample_type_colours <- gsub("Bx", brewer_colours[2], sample_type_colours)
+#Transpoing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#producing heatmap
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=sample_type_colours, margins = c(2.7,8.5), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), labRow = row.names(heatmap.info.t), cexRow = 0.7, cexCol = 0.7, offsetRow=0.0000001, offsetCol = 0.0000001, labCol = metadata_info$new.Sample.ID, key.par=list(mar=c(2,4,1,1), cex=0.4), lwid=c(1,5), lhei=c(1,5))
+```
+
+## Figure 7: Heat map of Log2count of top 50 OTUs found to not be differentially abundant between biopsy and lavage samples by LefSe
+```{r top_50_non_lefse_genera}
+### Load packages or install if not present
+if (!require("arules")) {install.packages("arules")
+  library(arules)}
+if (!require("ade4")) {install.packages("ade4")
+  library(ade4)}
+if (!require("vegan")) {install.packages("vegan")
+  library(vegan)}
+if (!require("gdata")) {install.packages("gdata")
+  library(gdata)}
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+#Read in data
+data <- read.csv("16sBxCL_Top_50_OTU_log2count_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_Top_50_OTU_taxa_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+#Selecting colour palette for plot
+brewer_colours <- brewer.pal(9, "Set1")
+#Order heatmap_info and metadata_info so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+##Set colours to sample_types
+sample_type_colours <- gsub("FA",brewer_colours[1], sample_info)
+sample_type_colours <- gsub("Bx", brewer_colours[2], sample_type_colours)
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#Produce heatmap
+pdf("Fig7.pdf", 180/25.4, height=110/25.4)
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=as.character(metadata_info$Colour), labRow = taxa_info$Taxa.ID, labCol = metadata_info$new.Sample.ID, margins = c(2,7.5), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), cexRow = 0.65, cexCol = 0.6, offsetRow=0.0000001, offsetCol = 0.0000001, key.par=list(mar=c(1,3,1,1), cex=0.3), lwid=c(1,5), lhei=c(1,5))
+dev.off()
+```
+```{r top_50_non_lefse_genera_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("arules")) {install.packages("arules")
+  library(arules)}
+if (!require("ade4")) {install.packages("ade4")
+  library(ade4)}
+if (!require("vegan")) {install.packages("vegan")
+  library(vegan)}
+if (!require("gdata")) {install.packages("gdata")
+  library(gdata)}
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+data <- read.csv("16sBxCL_Top_50_OTU_log2count_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_Top_50_OTU_taxa_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+#Getting colours from colour brewer
+brewer_colours <- brewer.pal(9, "Set1")
+#Check if heatmap_info and metadata_info are in the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+identical(row.names(metadata_info), row.names(heatmap_info))
+##Setting colours to sample_types
+sample_type_colours <- gsub("FA",brewer_colours[1], sample_info)
+sample_type_colours <- gsub("Bx", brewer_colours[2], sample_type_colours)
+#Transpoing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#producing heatmap
+heatmap.2(as.matrix(heatmap.info.t), ColSideColors=as.character(metadata_info$Colour), labRow = taxa_info$Taxa.ID, labCol = metadata_info$new.Sample.ID, margins = c(2,7.5), key.xlab="Log2count", key.title=NA, trace="none", col=function(x)rev(heat.colors(x)), cexRow = 0.65, cexCol = 0.6, offsetRow=0.0000001, offsetCol = 0.0000001, key.par=list(mar=c(1,3,1,1), cex=0.3), lwid=c(1,5), lhei=c(1,5))
+```
+
+## Figure 8: Clustering of samples' PICRUSt predicted KEGG pathways according to sample type (colonic biopsy and lavage) by NMDS, based on Yue & Clayton similarity distance.
+```{r picrust_keggs_thetayc_nmds}
+#Input file names
+axes_file_name <- "16sBxCL.KEGG_pathways.shared.thetayc.unique.lt.ave.nmds.axes"
+metadata_file_name <- "16sBxCL_Metadata.txt"
+#PDF output file name
+PDF_file_name <- "Fig8.pdf"
+##Relevant metadata columns
+PAIRED <- "new.Sample.type"
+SAMPLE <- "Individual"
+#Read in data
+plot_data <- read.csv(axes_file_name,sep="\t", row.names = 1)
+metadata <- read.csv(metadata_file_name,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same order
+plot_data <- plot_data[order(row.names(plot_data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match and stop if not
+stopifnot(identical(row.names(plot_data), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=plot_data, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#Sets column to variables
+axis1 <- plot_data_metadata[,1]
+axis2 <- plot_data_metadata[,2]
+axis3 <- plot_data_metadata[,3]
+#Set the minimum and maximum x so each plot is the same size as each other for comparison 
+maxx <- max(c(max(axis1),max(axis2),max(axis3)))
+minx <- min(c(min(axis1),min(axis2),min(axis3)))
+#Grouping to colour by
+group_samples <- as.factor(plot_data_metadata[,SAMPLE])
+#Creates plot points for first and second samples
+#This data will be used to connect the points together
+first_level <- levels(plot_data_metadata[,PAIRED])[1]
+second_level <- levels(plot_data_metadata[,PAIRED])[2]
+first_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==first_level,]
+second_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==second_level,]
+#Order data to get colouring correct
+first_rows <- first_rows[order(first_rows[,SAMPLE]),]
+second_rows <- second_rows[order(second_rows[,SAMPLE]),]
+first_group_samples <- as.factor(first_rows[,SAMPLE])
+second_group_samples <- as.factor(second_rows[,SAMPLE])
+#Selecting colour palette for plot
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+palette(col.brew)
+#Assignment of axes labels
+axis_1_lab <- paste("axis1")
+axis_2_lab <- paste("axis2")
+axis_3_lab <- paste("axis3")
+#Function to produce single 2d plot
+plot_production <- function(nx, ny, xlabel, ylabel){
+  #Make an empty plotting area with axis labels
+  plot(0,0, xlab = xlabel, ylab = ylabel, xlim=c(minx-0.001, maxx+0.001), ylim=c(minx-0.001, maxx+0.001), pch=19,col=NA, type='b')
+  #Sets colour of background of plot
+  rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#f6f6f6")
+  #Sets gridlines that match the ticks of the axes
+  grid (NULL,NULL, lty = 6, col = "black", lwd=0.3)
+  #Add black borders to points
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=0.8)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=0.8)
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=0.6)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=0.6)
+  #This part will plot pair by pair
+  #This is so pairs only connect to each other by the dashed lines
+  for (i in 1:num_samples){
+    n <- i
+    points(c(first_rows[n,nx],second_rows[n,nx]), c(first_rows[n,ny],second_rows[n,ny]), type='b', pch=c(2,1), lwd=0.7, col=i, cex=0.7, lty=2)
+  }
+}
+#Save plot to pdf file
+pdf(PDF_file_name, width = 85/25.4, height = 85/25.4)
+#Creates diagram to put NMDs plots into
+par(mfrow=c(2,2), oma = c(0.8,0.8,0.8,0.8), mgp= c(2,1,0), mar=c(3,3,1,1), cex=0.5, lwd=0.7)
+#Variable used within function
+num_samples <- nrow(first_rows)
+# creating the 3 2d plots
+plot_production(1,2,axis_1_lab,axis_2_lab)
+plot_production(1,3,axis_1_lab,axis_3_lab)
+plot_production(3,2,axis_3_lab,axis_2_lab)
+#number for plotting legend
+#n is the number of samples there are
+n <- nlevels(group_samples)
+#Determine if there is an even or odd amount of paired samples
+if (n %% 2 == 0) { n1 <- n/2
+n2 <- n/2 } else { n1 <- (n+1)/2
+n2 <- (n-1)/2
+}
+x_leg <- c(rep(1, n1),rep(3, n2))
+y_leg <- c((n1+1):2,(n2+1):2)
+#Plot used as a legend for the overall diagram
+plot(x_leg, y_leg, xlab="", ylab="", xlim=c(0,5), ylim=c(0,(n/2)+2), pch=19, col="black",cex=1.3, xaxt='n', yaxt='n')
+points(x_leg, y_leg, col=col.brew, pch=19)
+text(x_leg+1,y_leg,levels(group_samples))
+points(1,1, lwd=0.5, pch=2)
+text(2,1, levels(plot_data_metadata[,PAIRED])[1])
+points(3,1, lwd=0.5, pch=1)
+text(4,1, levels(plot_data_metadata[,PAIRED])[2])
+dev.off()
+```
+```{r picrust_keggs_thetayc_nmds_fig, echo=FALSE}
+#File names to input
+#NMDs axes file from mothur
+axes_file_name <- "16sBxCL.KEGG_pathways.shared.thetayc.unique.lt.ave.nmds.axes"
+#Metadata file with row names same as PCoA axes row names
+metadata_file_name <- "16sBxCL_Metadata.txt"
+#Name of PDF to be output
+#Make sure it ends with .pdf
+PDF_file_name <- "CGEBMP83_new_3by2dplot_NMDS-connected_points_thetayc.pdf"
+##Name of column to seperate paired samples
+PAIRED <- "new.Sample.type"
+#Name of column to seperate samples
+SAMPLE <- "Individual"
+#Reads in data
+plot_data <- read.csv(axes_file_name,sep="\t", row.names = 1)
+metadata <- read.csv(metadata_file_name,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same then add them together
+plot_data <- plot_data[order(row.names(plot_data)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match and stop if not
+stopifnot(identical(row.names(plot_data), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=plot_data, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+plot_data_metadata <- plot_data_metadata[,-1]
+#Sets columns to variables
+axis1 <- plot_data_metadata[,1]
+axis2 <- plot_data_metadata[,2]
+axis3 <- plot_data_metadata[,3]
+#Used to set the minimum and maximum x so each
+#plot is the same size as each other for better comparison 
+maxx <- max(c(max(axis1),max(axis2),max(axis3)))
+minx <- min(c(min(axis1),min(axis2),min(axis3)))
+#Grouping to colour by
+group_samples <- as.factor(plot_data_metadata[,SAMPLE])
+#Creates plot points for first and second samples
+#This data will be used to connect the points together
+first_level <- levels(plot_data_metadata[,PAIRED])[1]
+second_level <- levels(plot_data_metadata[,PAIRED])[2]
+first_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==first_level,]
+second_rows <- plot_data_metadata[plot_data_metadata[,PAIRED]==second_level,]
+#Order data to get colouring correct
+first_rows <- first_rows[order(first_rows[,SAMPLE]),]
+second_rows <- second_rows[order(second_rows[,SAMPLE]),]
+first_group_samples <- as.factor(first_rows[,SAMPLE])
+second_group_samples <- as.factor(second_rows[,SAMPLE])
+#If you would like to reorder the levels of your groups
+#group_samples <- factor(group_samples,levels(group_samples)[c(NUMBERS)])
+#Creates colour palette to be used for colouring points
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+palette(col.brew)
+#Assignment of axes labels
+axis_1_lab <- paste("axis1")
+axis_2_lab <- paste("axis2")
+axis_3_lab <- paste("axis3")
+#Function to produce single 2d plot
+plot_production <- function(nx, ny, xlabel, ylabel){
+  #Make an empty plotting area with axis labels
+  plot(0,0, xlab = xlabel, ylab = ylabel, xlim=c(minx-0.001, maxx+0.001), ylim=c(minx-0.001, maxx+0.001), pch=19,col=NA, type='b')
+  #Sets colour of background of plot
+  rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#f6f6f6")
+  #Sets gridlines that match the ticks of the axes
+  grid (NULL,NULL, lty = 6, col = "black", lwd=0.3)
+  #Add black borders to points
+  #These are put behind the points
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=0.8)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=0.8)
+  points(first_rows[,nx], first_rows[,ny], type='p', pch=2, col="black", cex=0.6)
+  points(second_rows[,nx], second_rows[,ny], type='p', pch=1, col="black", cex=0.6)
+  #This part will plot pair by pair
+  #This is so pairs only connect to each other by the dashed lines
+  for (i in 1:num_samples){
+    n <- i
+    points(c(first_rows[n,nx],second_rows[n,nx]), c(first_rows[n,ny],second_rows[n,ny]),  type='b', pch=c(2,1), lwd=0.7, col=i, cex=0.7, lty=2)
+  }
+}
+#Creates diagram to put diagrams into
+par(mfrow=c(2,2), oma = c(0.8,0.8,0.8,0.8),
+    mgp= c(2,1,0), mar=c(3,3,1,1),
+    cex=0.5, lwd=0.7)
+num_samples <- nrow(first_rows)
+# creating the 3 2d plots
+plot_production(1,2,axis_1_lab,axis_2_lab)
+plot_production(1,3,axis_1_lab,axis_3_lab)
+plot_production(3,2,axis_3_lab,axis_2_lab)
+#number for plotting legend
+#n is the number of samples there are
+n <- nlevels(group_samples)
+#Determine if there is an even or odd amount of paired samples
+if (n %% 2 == 0) { n1 <- n/2
+n2 <- n/2 } else { n1 <- (n+1)/2
+n2 <- (n-1)/2
+}
+x_leg <- c(rep(1, n1),rep(3, n2))
+y_leg <- c((n1+1):2,(n2+1):2)
+#Plot bottom right
+#Plot used as a legend for the overall diagram
+plot(x_leg, y_leg, xlab="", ylab="", xlim=c(0,5), ylim=c(0,(n/2)+2), pch=19, col="black",cex=1.3, xaxt='n', yaxt='n')
+points(x_leg, y_leg, col=col.brew, pch=19)
+text(x_leg+1,y_leg,levels(group_samples))
+points(1,1, lwd=0.5, pch=2)
+text(2,1, levels(plot_data_metadata[,PAIRED])[1])
+points(3,1, lwd=0.5, pch=1)
+text(4,1, levels(plot_data_metadata[,PAIRED])[2])
+```
+
+## Supplementary figure 2: Rarefaction curve of all 46 samples following removal of rare OTUs
+```{r rarefaction_curve_post_rare_removal}
+### Load packages or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Set name of input file
+rarefaction_file="colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.groups.rarefaction"
+#Name of output PDF file
+pdf_file_name="SuppFig2.pdf"
+#Read in data
+rarefaction_data <- read.csv(file = rarefaction_file, sep="\t")
+#Remove confidence interval information
+rarefaction_data <- rarefaction_data[,c(1,seq(from=2, to= ncol(rarefaction_data), by=3))]
+#Convert to long list format
+rarefaction_data_long <- gather(rarefaction_data, sample, Measure, 2:ncol(rarefaction_data))
+#Change name of numsampled to match ggplot
+colnames(rarefaction_data_long)[1] <- "numsampled"
+#Select colour palette to be used in plot
+colset <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1"))
+#ggplot for rarefaction curve
+g <- ggplot(data = rarefaction_data_long, aes(x=numsampled, y=Measure, group=sample, colour=sample)) + geom_smooth(se = FALSE, size=0.2) + theme_set(theme_gray(base_size = 8)) + theme(text=element_text(size=8), legend.position="none", plot.margin =unit(c(0,0,0,0),"mm")) + scale_y_continuous(name="OTUs found") + scale_x_continuous(name="Number sampled")
+ggsave(pdf_file_name, g, units="mm", width=85, height=85)
+```
+```{r rarefaction_curve_post_rare_removal_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#for gather command (wide to long)
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Set name of input file
+rarefaction_file="colonoscopy.makecontigsfile.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.pick.groups.rarefaction"
+#Remember to include suffix .pdf
+pdf_file_name="16sBxCL_rarefaction_curve_after_rare_removal_new.pdf"
+#Read in data
+rarefaction_data <- read.csv(file = rarefaction_file, sep="\t")
+#Remove confidence interval information
+rarefaction_data <- rarefaction_data[,c(1,seq(from=2, to= ncol(rarefaction_data), by=3))]
+#Convert to long format
+rarefaction_data_long <- gather(rarefaction_data, sample, Measure, 2:ncol(rarefaction_data))
+#Change name of numsampled to match ggplot
+colnames(rarefaction_data_long)[1] <- "numsampled"
+#Colours for lines
+colset <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1"))
+#Ggplot for rarefaction curve
+g <- ggplot(data = rarefaction_data_long, aes(x=numsampled, y=Measure, group=sample, colour=sample)) + geom_smooth(se = FALSE, size=0.2) + theme_set(theme_gray(base_size = 8)) + theme(text=element_text(size=8), legend.position="none", plot.margin =unit(c(0,0,0,0),"mm")) + scale_y_continuous(name="OTUs found") + scale_x_continuous(name="Number sampled")
+g
+```
+
+## Supplementary figure 4: Assessment of the uncertainty in the hierarchical cluster analysis
+```{r hierarchical_assessment}
+##(A) log2 count of sequences within families
+### Load packages or install if not present
+if (!require("pvclust")) {install.packages("pvclust")
+  library(pvclust)}
+#Load in data
+data <- read.csv("16sBxCL_family_phylotype_log2counts_summary.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+#Remove unwanted column
+heatmap_info <- data[,-1]
+sample_info <- metadata_info$Sample.type
+#Order heatmap_info and metadata so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#PVclust to test reliability of clustering by Sample
+heatmap.info.t.new_names <- heatmap.info.t
+colnames(heatmap.info.t.new_names) <- metadata_info$new.Sample.ID
+#pvclust analysis
+pvclust_samples <- pvclust(heatmap.info.t.new_names, method.dist="euclidean",method.hclust = "complete", nboot=1000)
+#produce PDF of pvclust hierarchical assessment
+pdf("SuppFig4A.pdf", width = 85/25.4, height = 80/25.4)
+par(mar=c(0.2,3,2,0), cex = 0.6)
+#Plot pvclust data
+plot(pvclust_samples,
+     #Change text size of labels and p-values
+     cex = 0.7, cex.pv = 0.7)
+#Add boxs to signify significant clusters
+pvrect(pvclust_samples, alpha = 0.95)
+dev.off()
+###
+##(B) Differentially abundant OTUs between biopsy and lavage samples by LefSe 
+###
+#Load in data and edit
+data <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", header=FALSE, sep="\t", row.names=1)
+taxa_info <- taxa_info[1,-1]
+#Order heatmap_info and metadata_info so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#PVclust to test reliability of clustering by Sample
+heatmap.info.t.new_names <- heatmap.info.t
+colnames(heatmap.info.t.new_names) <- metadata_info$new.Sample.ID
+#pvclust analysis
+pvclust_samples <- pvclust(heatmap.info.t.new_names, method.dist="euclidean",method.hclust = "complete", nboot=1000)
+#produce PDF of pvclust hierarchical assessment
+pdf("SuppFig4B.pdf", width = 85/25.4, height = 80/25.4)
+par(mar=c(0.2,3,2,0), cex = 0.6)
+plot(pvclust_samples,
+     #Change text size of labels and p-values
+     cex = 0.7, cex.pv = 0.7)
+#Add boxs to signify significant clusters
+pvrect(pvclust_samples, alpha = 0.95)
+dev.off()
+###
+##(C) The top 50 OTUs found to not be differentially abundant between biopsy and lavage samples by LEfSe
+###
+#Read in data
+data <- read.csv("16sBxCL_Top_50_OTU_log2count_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_Top_50_OTU_taxa_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+#Order heatmap_info and metadata_info so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#PVclust to test reliability of clustering by Sample
+heatmap.info.t.new_names <- heatmap.info.t
+colnames(heatmap.info.t.new_names) <- metadata_info$new.Sample.ID
+#pvclust analysis
+pvclust_samples <- pvclust(heatmap.info.t.new_names, method.dist="euclidean",method.hclust = "complete", nboot=1000)
+#produce PDF of pvclust hierarchical assessment
+pdf("SuppFig4C.pdf", width = 85/25.4, height = 80/25.4)
+par(mar=c(0.2,3,2,0), cex = 0.6)
+plot(pvclust_samples,
+     #Change text size of labels and p-values
+     cex = 0.7, cex.pv = 0.7)
+#Add boxs to signify significant clusters
+pvrect(pvclust_samples, alpha = 0.95)
+dev.off()
+```
+```{r hierarchical_assessment_fig, echo=FALSE}
+##(A) log2 count of sequences within families
+### Load packages or install if not present
+if (!require("pvclust")) {install.packages("pvclust")
+  library(pvclust)}
+#Load in data
+data <- read.csv("16sBxCL_family_phylotype_log2counts_summary.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+#Remove unwanted column
+heatmap_info <- data[,-1]
+sample_info <- metadata_info$Sample.type
+#Order heatmap_info and metadata so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#PVclust to test reliability of clustering by Sample
+heatmap.info.t.new_names <- heatmap.info.t
+colnames(heatmap.info.t.new_names) <- metadata_info$new.Sample.ID
+#pvclust analysis
+pvclust_samples <- pvclust(heatmap.info.t.new_names, method.dist="euclidean",method.hclust = "complete", nboot=1000)
+par(mar=c(0.2,3,2,0), cex = 0.6)
+#Plot pvclust data
+plot(pvclust_samples,
+     #Change text size of labels and p-values
+     cex = 0.7, cex.pv = 0.7)
+#Add boxs to signify significant clusters
+pvrect(pvclust_samples, alpha = 0.95)
+###
+##(B) Differentially abundant OTUs between biopsy and lavage samples by LefSe 
+###
+#Load in data and edit
+data <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_LEfSe_subsample_otu_log2count_info_with_taxa.txt", header=FALSE, sep="\t", row.names=1)
+taxa_info <- taxa_info[1,-1]
+#Order heatmap_info and metadata_info so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#PVclust to test reliability of clustering by Sample
+heatmap.info.t.new_names <- heatmap.info.t
+colnames(heatmap.info.t.new_names) <- metadata_info$new.Sample.ID
+#pvclust analysis
+pvclust_samples <- pvclust(heatmap.info.t.new_names, method.dist="euclidean",method.hclust = "complete", nboot=1000)
+par(mar=c(0.2,3,2,0), cex = 0.6)
+plot(pvclust_samples,
+     #Change text size of labels and p-values
+     cex = 0.7, cex.pv = 0.7)
+#Add boxs to signify significant clusters
+pvrect(pvclust_samples, alpha = 0.95)
+###
+##(C) The top 50 OTUs found to not be differentially abundant between biopsy and lavage samples by LEfSe
+###
+#Read in data
+data <- read.csv("16sBxCL_Top_50_OTU_log2count_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+metadata_info <- read.csv("16sBxCL_Metadata.txt", sep="\t", row.names=1)
+heatmap_info <- data[,-1]
+sample_info <- data$Sample_type
+taxa_info <- read.csv("16sBxCL_Top_50_OTU_taxa_info_minus_differentially_abundant_otus_lefse_subsample.txt", sep="\t", row.names=1)
+#Order heatmap_info and metadata_info so they are the same order
+heatmap_info <- heatmap_info[order(row.names(heatmap_info)),]
+metadata_info <- metadata_info[order(row.names(metadata_info)),]
+#Check if row names match
+stopifnot(identical(row.names(metadata_info), row.names(heatmap_info)))
+#Transposing heatmap_info
+heatmap.info.t <- t(heatmap_info)
+#PVclust to test reliability of clustering by Sample
+heatmap.info.t.new_names <- heatmap.info.t
+colnames(heatmap.info.t.new_names) <- metadata_info$new.Sample.ID
+#pvclust analysis
+pvclust_samples <- pvclust(heatmap.info.t.new_names, method.dist="euclidean",method.hclust = "complete", nboot=1000)
+par(mar=c(0.2,3,2,0), cex = 0.6)
+plot(pvclust_samples,
+     #Change text size of labels and p-values
+     cex = 0.7, cex.pv = 0.7)
+#Add boxs to signify significant clusters
+pvrect(pvclust_samples, alpha = 0.95)
+```
+
+## Supplementary figure 5: Predicted KEGG pathway comparison between colonic biopsy and lavage sample
+
+### A) KEGG pathway abundance 
+```{r picrust_kegg_barchart}
+### Load packages or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#File names
+taxa_table_file <- "16sBxCL_picrust_predicted_metagenome.KEGG_pathways_L3.relabund.txt"
+metadata_file <- "16sBxCL_Metadata.txt"
+PDF_file <- "SuppFig5A.pdf"
+#Read in files
+taxa_data <- read.csv(taxa_table_file, sep = "\t", row.names = 1)
+metadata <- read.csv(metadata_file, sep = "\t", row.names = 1)
+#Remove empty rows
+taxa.no0 <- taxa_data[ rowSums(taxa_data)!=0,]
+#Transpose taxa data
+taxa.no0.t <- t(taxa.no0)
+#Check if heatmap_info and metadata_info are in the same order
+taxa.no0.t <- taxa.no0.t[order(row.names(taxa.no0.t)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match
+stopifnot(identical(row.names(taxa.no0.t), row.names(metadata)))
+#Merge data
+plot_data_metadata <- merge(x=taxa.no0.t, y=metadata, by="row.names")
+#Change data to long list format
+plot_data_metadata_long <- gather(plot_data_metadata, Taxa, Measure, (2:281))
+#Select colour palette for plot
+colset <- rep (c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1")), 10)
+#Plot the data
+g_bar <- ggplot(plot_data_metadata_long, aes(x =new.Sample.type, y=Measure, fill=Taxa)) + geom_bar(stat = 'identity', position = 'fill', width=0.95) + facet_wrap( ~ Individual, nrow=1) + theme_set(theme_grey(base_size = 8)) + theme(legend.position="none", panel.margin = unit(0.1, "lines"), axis.text.x = element_text(angle = 90, hjust = 1)) + scale_fill_manual(values = colset) + xlab("Subject type") + ylab("Relative abundance") + scale_y_continuous(expand = c(0,0)) + geom_text(aes(x=1, y=1.00, label="Stretch it"), vjust=-1)
+ggsave(PDF_file, g_bar, units="mm", height=105, width=170, dpi=300)
+```
+```{r picrust_kegg_barchart_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#for gather command (wide to long)
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#File names
+taxa_table_file <- "16sBxCL_picrust_predicted_metagenome.KEGG_pathways_L3.relabund.txt"
+metadata_file <- "16sBxCL_Metadata.txt"
+PDF_file <- "CGEBMP83_picrust_predicted_kegg_pathways_bar_chart.pdf"
+#Read in files
+taxa_data <- read.csv(taxa_table_file, sep = "\t", row.names = 1)
+metadata <- read.csv(metadata_file, sep = "\t", row.names = 1)
+#Remove empty rows
+taxa.no0 <- taxa_data[ rowSums(taxa_data)!=0,]
+#Transpose taxa data
+taxa.no0.t <- t(taxa.no0)
+#Check if heatmap_info and metadata_info are in the same order
+taxa.no0.t <- taxa.no0.t[order(row.names(taxa.no0.t)),]
+metadata <- metadata[order(row.names(metadata)),]
+stopifnot(identical(row.names(taxa.no0.t), row.names(metadata)))
+#Merge data
+plot_data_metadata <- merge(x=taxa.no0.t, y=metadata, by="row.names")
+#Change data to long format
+plot_data_metadata_long <- gather(plot_data_metadata, Taxa, Measure, (2:281))
+#Colours for phyla
+colset <- rep (c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1")), 10)
+#PLot the data
+g_bar <- ggplot(plot_data_metadata_long, aes(x =new.Sample.type, y=Measure, fill=Taxa)) + geom_bar(stat = 'identity', position = 'fill', width=0.95) + facet_wrap( ~ Individual, nrow=1) + theme_set(theme_grey(base_size = 8)) + theme(legend.position="none", panel.margin = unit(0.1, "lines"), axis.text.x = element_text(angle = 90, hjust = 1)) + scale_fill_manual(values = colset) + xlab("Subject type") + ylab("Relative abundance") + scale_y_continuous(expand = c(0,0)) + geom_text(aes(x=1, y=1.00, label="Stretch it"), vjust=-1)
+#This command will save the above g_bar object as a pdf
+g_bar
+```
+
+### B) Alpha diversity scores
+```{r picrust_kegg_boxplot}
+### Load packages or install if not present
+if (!require("RColorBrewer")) {
+  install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Name of input files
+alpha_file="16sBxCL.KEGG_pathways.shared.groups.ave-std.summary"
+metadata_file="16sBxCL_Metadata.txt"
+#name of output PDF file
+pdf_file_box_plot="SuppFig5B.pdf"
+#Read in data and manipulate
+alpha_data <- read.csv(alpha_file,sep="\t")
+alpha_data <- alpha_data[alpha_data$method == "ave",]
+rownames(alpha_data) <- alpha_data$group
+#Keep relevant columns
+alpha_data <- alpha_data[,c("sobs", "chao", "shannon", "invsimpson", "coverage")]
+#Rename columns
+colnames(alpha_data) <- c("KEGG Pathways", "Chao","Shannon-Weiner", "Inverse Simpson", "Coverage")
+#To determine order of alpha diversity for plot
+alpha_order <- c("KEGG Pathways", "Chao","Shannon-Weiner", "Inverse Simpson", "Coverage")
+#Function to manipulate data
+produce_plot <- function(ALPHA_DATA, METADATA_FILE, ORDER_ALPHA){
+### Load package or install if not present
+if (!require("tidyr")) {install.packages("tidyr")
+    library(tidyr)}
+#Read in Metadata file
+metadata <- read.csv(METADATA_FILE,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same order
+alpha_data_t <- ALPHA_DATA[order(row.names(ALPHA_DATA)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match and stop if not
+stopifnot(identical(row.names(alpha_data_t), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=alpha_data_t, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+colnames(plot_data_metadata)[1] <- "Sample_ID"
+#Convert to long
+alpha_long <- gather(plot_data_metadata, Alpha_diversity_measure, value, 2:(ncol(ALPHA_DATA)+1))
+#Reorder measures
+alpha_long$Alpha_diversity_measure_f <- factor(alpha_long$Alpha_diversity_measure, levels=ORDER_ALPHA)
+return(alpha_long)
+}
+#Function to manipulate data to make it ready for ggplot
+alpha_long <- produce_plot(alpha_data, metadata_file, alpha_order)
+
+#Mann whitney u test
+alpha_long_t <- alpha_long[,-11]
+mann_whitney_data <- spread(alpha_long_t, Alpha_diversity_measure_f, value)
+colnames(mann_whitney_data)[13:16] <- c("KEGG", "Chao", "ShannonWeiner", "InvSimpson")
+wilcox.test(KEGG ~ new.Sample.type, data=mann_whitney_data)
+wilcox.test(Chao ~ new.Sample.type, data=mann_whitney_data)
+wilcox.test(ShannonWeiner ~ new.Sample.type, data=mann_whitney_data)
+wilcox.test(InvSimpson ~ new.Sample.type, data=mann_whitney_data)
+wilcox.test(Coverage ~ new.Sample.type, data=mann_whitney_data)
+
+#Select colour palette for plot
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+#Box Plot for alpha diversity comparing aspirate and biopsy
+g_box <- ggplot(alpha_long, aes(x=Sample.type, y=value, fill=new.Sample.type)) +  geom_boxplot(outlier.colour = NA) + theme_set(theme_gray(base_size = 8)) + facet_wrap(~ Alpha_diversity_measure_f, nrow=1, scales="free") + geom_point(position = position_jitter(width = 0.2)) + scale_x_discrete(breaks=NULL, name="") + scale_fill_manual(values=c(col.brew[2], col.brew[1]), name="Sample type") + scale_y_continuous(name="") + theme_grey(base_size = 8) + theme(legend.position="bottom", legend.margin=unit(0,"cm"))
+ggsave(pdf_file_box_plot, g_box, units="mm", height=75, width=170, dpi=300)
+```
+```{r picrust_kegg_boxplot_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {
+  install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Name of files
+alpha_file="16sBxCL.KEGG_pathways.shared.groups.ave-std.summary"
+metadata_file="16sBxCL_Metadata.txt"
+#pdf_file_bar_chart="16sBxCL_picrust_KEGG_pathways_bar_chart.pdf"
+pdf_file_box_plot="16sBxCL_picrust_KEGG_pathways_box_plot.pdf"
+#Reads in data and manipulate
+alpha_data <- read.csv(alpha_file,sep="\t")
+alpha_data <- alpha_data[alpha_data$method == "ave",]
+rownames(alpha_data) <- alpha_data$group
+#Remove the columns you are not interested in the alpha diversity data frame
+alpha_data <- alpha_data[,c("sobs", "chao", "shannon", "invsimpson", "coverage")]
+#Rename columns
+colnames(alpha_data) <- c("KEGG Pathways", "Chao","Shannon-Weiner", "Inverse Simpson", "Coverage")
+#To determine order of alpha diversity for plot
+alpha_order <- c("KEGG Pathways", "Chao","Shannon-Weiner", "Inverse Simpson", "Coverage")
+#Function to produce plot and PDF of plot
+produce_plot <- function(ALPHA_DATA, METADATA_FILE, ORDER_ALPHA){
+#Load needed library
+if (!require("tidyr")) {install.packages("tidyr")
+    library(tidyr)}
+#Read in Metadata file
+metadata <- read.csv(METADATA_FILE,sep="\t", row.names = 1)
+#Order plot_data and metadata so they are the same then add them together
+alpha_data_t <- ALPHA_DATA[order(row.names(ALPHA_DATA)),]
+metadata <- metadata[order(row.names(metadata)),]
+#Check if row names match and stop if not
+stopifnot(identical(row.names(alpha_data_t), row.names(metadata)))
+#Merge data frames
+plot_data_metadata <- merge(x=alpha_data_t, y=metadata, by="row.names")
+#Fix rownames after merge
+row.names(plot_data_metadata) <- plot_data_metadata[,1]
+colnames(plot_data_metadata)[1] <- "Sample_ID"
+#Convert to long
+alpha_long <- gather(plot_data_metadata, Alpha_diversity_measure, value, 2:(ncol(ALPHA_DATA)+1))
+#Reorder measures
+alpha_long$Alpha_diversity_measure_f <- factor(alpha_long$Alpha_diversity_measure, levels=ORDER_ALPHA)
+return(alpha_long)
+}
+#Function to manipulate data to make it ready for ggplot
+alpha_long <- produce_plot(alpha_data, metadata_file, alpha_order)
+#Set colours
+col.brew <- c(brewer.pal(9, "Set1"),brewer.pal(8,"Set2"),brewer.pal(12,"Set3"))
+#Box Plot for aspirate against biopsy
+#IN this plot you will most liekly want the x and fill to be the same
+g_box <- ggplot(alpha_long, aes(x=Sample.type, y=value, fill=new.Sample.type)) + geom_boxplot(outlier.colour = NA) + theme_set(theme_gray(base_size = 8)) + facet_wrap(~ Alpha_diversity_measure_f, nrow=1, scales="free") + geom_point(position = position_jitter(width = 0.2)) + scale_x_discrete(breaks=NULL, name="") + scale_fill_manual(values=c(col.brew[2], col.brew[1]), name="Sample type") + scale_y_continuous(name="") + theme_grey(base_size = 8) + theme(legend.position="bottom", legend.margin=unit(0,"cm"))
+#This command will save the above g_bar object as a pdf
+#Can change the size of the PDF
+g_box
+```
+
+### C) LEfSe LDA scores
+```{r kegg_lefse}
+### Load packages or install if not present
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#read in data and manipulate
+plot_data <- read.csv("16sBxCL_LEfSe_kegg_pathway_discovered_biomarkers.txt", sep="\t", header=FALSE)
+colnames(plot_data) <- c("KEGG", "LogMaxMean", "Class", "LDA", "pvalue", "new.Class")
+plot_data$KEGG <- factor(plot_data$KEGG, levels=plot_data$KEGG[order(plot_data$LDA)])
+#Produce plot
+g <- ggplot(plot_data, aes(x=KEGG, y=LDA, fill=new.Class)) + geom_bar(stat="identity", position="identity") + theme_set(theme_gray(base_size = 8)) + coord_flip() + ylab("LDA SCORE (log 10)") + xlab("") + scale_fill_manual(name="Class", values = c("#377EB8","#E41A1C"), breaks=c("Biopsy", "Lavage"), labels=c("Biopsy", "Lavage")) + theme(text= element_text(size=8), axis.text.y  = element_text(size=8), axis.text.x  = element_text(size=8), legend.text= element_text(size = 8), legend.key.size = unit(4, "mm"), plot.margin=unit(c(1,1,1,1),"mm"))
+ggsave("SuppFig5C.pdf", g, units="mm", height=50, width=170, dpi=300)
+```
+```{r kegg_lefse_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("gplots")) {install.packages("gplots")
+  library(gplots)}
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#read in data
+plot_data <- read.csv("16sBxCL_LEfSe_kegg_pathway_discovered_biomarkers.txt", sep="\t", header=FALSE)
+colnames(plot_data) <- c("KEGG", "LogMaxMean", "Class", "LDA", "pvalue", "new.Class")
+plot_data$KEGG <- factor(plot_data$KEGG, levels=plot_data$KEGG[order(plot_data$LDA)])
+#
+g <- ggplot(plot_data, aes(x=KEGG, y=LDA, fill=new.Class)) + geom_bar(stat="identity", position="identity") + theme_set(theme_gray(base_size = 8)) + coord_flip() + ylab("LDA SCORE (log 10)") + xlab("") +  scale_fill_manual(name="Class", values = c("#377EB8","#E41A1C"), breaks=c("Biopsy", "Lavage"), labels=c("Biopsy", "Lavage")) + theme(text= element_text(size=8), axis.text.y  = element_text(size=8), axis.text.x  = element_text(size=8), legend.text= element_text(size = 8), legend.key.size = unit(4, "mm"), plot.margin=unit(c(1,1,1,1),"mm"))
+g
+```
+
+## Supplementary figure 6: Average relative abundance of genera within biopsy and lavage samples matching contaminant genera from Salter et al 2014
+```{r possible_contaminat_genera}
+### Load packages or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#Input file names
+taxa_table_file <- "16sBxCL_contamination_genera_bar_chart.txt"
+#Set name of PDF output file
+PDF_file <- "SuppFig6.pdf"
+#Read in files
+taxa_data <- read.csv(taxa_table_file, sep = "\t")
+#Get ID info
+ID.info <- taxa_data[3,]
+#Only relabund info
+relabund.info <- taxa_data[1:2,]
+#Change data to long list format
+relabund.info_long <- gather(relabund.info, Genera, relabund, (2:(ncol(relabund.info))))
+#Change . in genera names to space
+relabund.info_long$Genera <- gsub('([[:punct:]])|\\s+', ' ', relabund.info_long$Genera)
+#Select colour palette for plot
+colset <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1"))
+#Plot the data
+g_bar <- ggplot(relabund.info_long, aes(x=Genera, y=(as.numeric(relabund)), fill=Sample.type)) + geom_bar(stat = 'identity', position = 'dodge', width=0.95) + scale_fill_manual(values = c(colset[2], colset[1])) + theme_set(theme_gray(base_size = 8)) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size=8)) + xlab("Genera") + ylab("Average Relative abundance") + scale_y_continuous(expand = c(0,0.0001)) + labs(fill='') + coord_flip()
+ggsave(PDF_file, g_bar, units="mm", height=140, width=170, dpi=300)
+```
+```{r possible_contaminat_genera_fig, echo=FALSE}
+### Load the package or install if not present
+if (!require("RColorBrewer")) {install.packages("RColorBrewer")
+  library(RColorBrewer)}
+if (!require("ggplot2")) {install.packages("ggplot2")
+  library(ggplot2)}
+#for gather command (wide to long)
+if (!require("tidyr")) {install.packages("tidyr")
+  library(tidyr)}
+#File names
+#Set names of input taxa and metadata files
+taxa_table_file <- "16sBxCL_contamination_genera_bar_chart.txt"
+#Set name of PDF output
+#Make sure it ends in .pdf
+PDF_file <- "contaminantion_bar_chart.pdf"
+#Read in files
+taxa_data <- read.csv(taxa_table_file, sep = "\t")
+#Get ID info
+ID.info <- taxa_data[3,]
+#Only relabund info
+relabund.info <- taxa_data[1:2,]
+#Change data to long format
+relabund.info_long <- gather(relabund.info, Genera, relabund, (2:(ncol(relabund.info))))
+#Change . in genera names ot space
+relabund.info_long$Genera <- gsub('([[:punct:]])|\\s+', ' ', relabund.info_long$Genera)
+#Colours for phyla
+colset <- c(brewer.pal(8, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"), brewer.pal(9, "Pastel1"))
+#Plot the data
+g_bar <- ggplot(relabund.info_long, aes(x=Genera, y=(as.numeric(relabund)), fill=Sample.type)) + geom_bar(stat = 'identity', position = 'dodge', width=0.95) + scale_fill_manual(values = c(colset[2], colset[1])) + theme_set(theme_gray(base_size = 8)) + theme(axis.text.x = element_text(angle = 90, hjust = 1, size=8)) + xlab("Genera") + ylab("Average Relative abundance") + scale_y_continuous(expand = c(0,0.0001)) + labs(fill='') + coord_flip()
+#This command will save the above g_bar object as a pdf
+#Can change the size of the PDF
+g_bar
+```
